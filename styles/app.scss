@@ -1,0 +1,137 @@
+* {
+  box-sizing: border-box;
+}
+
+.links line {
+  stroke: #999;
+  stroke-opacity: 0.6;
+}
+
+.nodes circle {
+  stroke: #fff;
+  stroke-width: 1.5px;
+  cursor: pointer;
+}
+
+.node text {
+  font: 9px helvetica;
+}
+
+.title text {
+  cursor: default;
+
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+
+  font-size:  16px;
+  paint-order: stroke;
+  stroke: white;
+  stroke-width: 5px;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+}
+
+#toggle {
+  position: absolute;
+  top: 20px;
+  left: 960px;
+}
+
+.group-title, div.tooltip {
+  position: absolute;
+  text-align: center;
+  padding: 2px;
+  font: 12px sans-serif;
+  background: lightsteelblue;
+  border: 0px;
+  border-radius: 8px;
+}
+
+#info {
+  position: absolute;
+  top: 20px;
+  left: -200px;
+  width: 200px;
+  transition: left 0.3s ease-out;
+  z-index: 1;
+  background: white;
+
+  &.info-visible {
+    left: -1px;
+  }
+
+  .header {
+    position: relative;
+    width: 100%;
+    border: 1px solid black;
+
+    .name {
+      font-size: 1.2em;
+      padding-left: 1em;
+      word-wrap: break-word;
+      width: 100%;
+      padding-right: 20px;
+    }
+
+    .close {
+      position: absolute;
+      right: 5px;
+      top: 0;
+      cursor: pointer;
+      font-weight: bold;
+      color: red;
+    }
+  }
+
+  .members ul {
+    overflow: auto;
+  }
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  border: 1px solid black;
+  border-top: none;
+  overflow: auto;
+}
+
+li {
+  list-style: none;
+  padding-left: 10px;
+  border-bottom: 1px solid black;
+}
+
+#overlay {
+  background: rgba(0, 0, 0, 0.5);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+
+  .modal {
+    margin: 50px auto 0 auto;
+    width: 300px;
+    height: 300px;
+    background: white;
+    color: black;
+
+    h3 {
+      height: 30px;
+      margin: 0;
+    }
+
+    ul {
+      height: calc(100% - 30px);
+      border-top: 1px solid black;
+    }
+
+    li {
+      cursor: pointer;
+    }
+  }
+}
