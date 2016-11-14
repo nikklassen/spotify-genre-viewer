@@ -1,5 +1,14 @@
+$fa-font-path: "./font-awesome/fonts";
+@import "font-awesome/scss/font-awesome";
+
+$thin-border: 1px solid black;
+
 * {
   box-sizing: border-box;
+}
+
+body {
+  font-family: 'PT Sans', Helvetica, Arial, sans-serif;
 }
 
 .links line {
@@ -49,14 +58,37 @@
   border-radius: 8px;
 }
 
+@keyframes open {
+  0% {
+    opacity: 0;
+    height: 0;
+    display: none;
+  }
+
+  1% {
+    opacity: 0;
+    height: auto;
+    display: block;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
 #info {
+  $info-width: 300px;
+
   position: absolute;
   top: 20px;
-  left: -200px;
-  width: 200px;
+
+  left: -$info-width;
+  width: $info-width;
+
   transition: left 0.3s ease-out;
   z-index: 1;
   background: white;
+  border: $thin-border;
 
   &.info-visible {
     left: -1px;
@@ -65,43 +97,89 @@
   .header {
     position: relative;
     width: 100%;
-    border: 1px solid black;
 
     .name {
+      line-height: 1.3em;
       font-size: 1.2em;
-      padding-left: 1em;
+      padding: 8px;
       word-wrap: break-word;
       width: 100%;
-      padding-right: 20px;
     }
 
     .close {
       position: absolute;
       right: 5px;
-      top: 0;
+      top: 5px;
       cursor: pointer;
       font-weight: bold;
       color: red;
     }
   }
 
-  .members ul {
+  ul {
+    overflow: visible;
+    white-space: nowrap;
+  }
+
+  .members {
+    border-top: $thin-border;
+    height: 200px;
+    width: auto;
     overflow: auto;
+    padding-left: 10px;
+    padding-right: 10px;
+    word-wrap: nowrap;
+
+    .genres, .tracks {
+      cursor: pointer;
+
+      &.expand i {
+        @extend .fa;
+        @extend .fa-chevron-down;
+      }
+    }
+
+    .fa-chevron-right {
+      margin-right: 8px;
+    }
+
+    > div, li {
+      line-height: 1.5em;
+      border: none;
+    }
+  }
+
+  .track-list, .genre-list {
+    height: 0;
+    opacity: 0;
+    display: none;
+
+    &.expand {
+      display: block;
+      height: auto;
+      opacity: 1;
+      animation: open 0.3s ease-in;
+    }
+
+    i {
+      cursor: pointer;
+    }
+    li {
+      margin-left: 15px;
+    }
   }
 }
 
 ul {
   margin: 0;
   padding: 0;
-  border: 1px solid black;
-  border-top: none;
   overflow: auto;
 }
 
 li {
   list-style: none;
   padding-left: 10px;
-  border-bottom: 1px solid black;
+  border-bottom: $thin-border;
 }
 
 #overlay {
@@ -132,6 +210,11 @@ li {
 
     li {
       cursor: pointer;
+    }
+
+    .spinner {
+      margin-top: 30%;
+      text-align: center;
     }
   }
 }

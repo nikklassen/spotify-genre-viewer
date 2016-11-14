@@ -25,12 +25,16 @@ module.exports = {
         test: /\.scss$/,
         loaders: ['style', 'css', 'sass'],
       },
+      {
+        test: /\.(eot|svg|ttf|woff|woff2)(\?v=\d+\.\d+\.\d+)?$/,
+        loader: 'file'
+      }
     ],
   },
   plugins: [
     new webpack.HotModuleReplacementPlugin(),
     new webpack.DefinePlugin({
-      CLIENT_ID: process.env.CLIENT_ID,
+      CLIENT_ID: `'${process.env.CLIENT_ID}'`,
     })
   ],
   devServer: {

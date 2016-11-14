@@ -1,10 +1,12 @@
 import * as d3 from 'd3';
 import spotify from './spotify';
-import { ObjectExts as oe } from './exts';
+import './exts';
+import _ from 'lodash';
 
 function renderPlaylists(data) {
     const playlistUrl = data.href.slice(0, data.href.indexOf('?'));
     d3.select('#playlists')
+      .html('')
       .selectAll('li')
       .data(data.items)
       .enter().append('li')
@@ -22,7 +24,7 @@ function renderPlaylists(data) {
 function populateGraph(data) {
   const genreSet = new Set();
   const genres = {};
-  oe.forEach(data.artists, function(_, artist) {
+  _.forOwn(data.artists, function(artist) {
     artist.genres.forEach(g => genreSet.add(g))
     artist.genres.forEach(function(genre1) {
       if (!genres[genre1]) {
@@ -52,8 +54,8 @@ function populateGraph(data) {
     });
   }
 
-  oe.forEach(genres, function(genre, connections) {
-    oe.forEach(connections, function(genre2, weight) {
+  _.forOwn(genres, function(connections, genre) {
+    _.forOwn(connections, function(weight, genre2) {
       if (genre < genre2) {
         jsonData.links.push({
           source: genre,
@@ -78,12 +80,11 @@ function getColours(graph) {
     if (!links) {
       return;
     }
-    oe.forEach(links, function(genre2) {
+    _.forOwn(links, function(weight, genre2) {
       groups[genre].add(genre2)
 
-      const count = links[genre2];
-      connections[genre] = (connections[genre] || 0) + count;
-      connections[genre2] = (connections[genre2] || 0) + count;
+      connections[genre] = (connections[genre] || 0) + weight;
+      connections[genre2] = (connections[genre2] || 0) + weight;
     });
   })
 
@@ -128,34 +129,37 @@ var div = d3.select('body').append('div')
 
 var colorMap = d3.scaleSequential(d3.interpolateRainbow);
 
-var simulation = d3.forceSimulation()
-  .force('link', d3.forceLink().id(d => d.id))
-  .force('charge', d3.forceManyBody()
-    .distanceMax(100)
-    .strength(-30))
-  .force('center', d3.forceCenter(width / 2, height / 2));
-
-
-function dragstarted(d) {
-  if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-  d.fx = d.x;
-  d.fy = d.y;
-}
-
-function dragged(d) {
-  d.fx = d3.event.x;
-  d.fy = d3.event.y;
-}
-
-function dragended(d) {
-  if (!d3.event.active) simulation.alphaTarget(0);
-  d.fx = null;
-  d.fy = null;
-}
-
 function buildGraph(graphData) {
   const graph = populateGraph(graphData);
   const colours = getColours(graph);
+
+  function getGenreColour(genre) {
+    return _.findKey(colours, group => {
+      return group.leader === genre || group.genres.has(genre);
+    });
+  }
+
+  const connected = {};
+  graph.links = graph.links.filter(function(l) {
+    const sourceGroup = getGenreColour(l.source);
+    const targetGroup = getGenreColour(l.target);
+
+    if (sourceGroup === targetGroup) return true;
+
+    // Intentionally leaving this direction dependent
+    if (_.get(connected, [sourceGroup, targetGroup], false)) {
+      return false;
+    }
+    _.set(connected, [sourceGroup, targetGroup], true);
+    return true;
+  });
+
+  const simulation = d3.forceSimulation()
+    .force('link', d3.forceLink().id(d => d.id))
+    .force('charge', d3.forceManyBody()
+      .distanceMax(100)
+      .strength(-30))
+    .force('center', d3.forceCenter(width / 2, height / 2));
 
   const link = svg.append('g')
     .attr('class', 'links')
@@ -170,20 +174,29 @@ function buildGraph(graphData) {
     .data(graph.nodes)
     .enter().append('g')
     .call(d3.drag()
-      .on('start', dragstarted)
-      .on('drag', dragged)
-      .on('end', dragended));
+      .on('start', d => {
+        if (!d3.event.active) {
+          simulation.alphaTarget(0.3).restart();
+        }
+        d.fx = d.x;
+        d.fy = d.y;
+      })
+      .on('drag', d => {
+        d.fx = d3.event.x;
+        d.fy = d3.event.y;
+      })
+      .on('end', d => {
+        if (!d3.event.active) {
+          simulation.alphaTarget(0);
+        }
+        d.fx = null;
+        d.fy = null;
+      }));
 
+  const numColours = _.size(colours);
   node.append('circle')
     .attr('r', 7)
-    .attr('fill', function(d) {
-      const colourGroups = Object.keys(colours);
-      for (const colour of colourGroups) {
-        if (colours[colour].genres.has(d.id)) {
-          return colorMap(colour / colourGroups.length);
-        }
-      }
-    })
+    .attr('fill', d => colorMap(getGenreColour(d.id) / numColours));
 
   node.append('title')
       .text(d => d.id);
@@ -211,7 +224,7 @@ function buildGraph(graphData) {
   simulation.force('link')
     .links(graph.links);
 
-  const titles = graph.nodes.filter(n => oe.some(colours, (k, v) => v.leader === n.id));
+  const titles = graph.nodes.filter(n => _.some(colours, (v, k) => v.leader === n.id));
   const titleNodes = svg.append('g')
     .attr('class', 'titles')
     .selectAll('.title')
@@ -234,32 +247,55 @@ function buildGraph(graphData) {
 
   node.on('click', function(d) {
     d3.event.stopPropagation();
-    let group;
-    oe.forEach(colours, function(colour, obj) {
-      if (obj.genres.has(d.id)) {
-        group = obj;
-      }
-    });
-
+    let group = colours[getGenreColour(d.id)];
     infoPanel.select('.name').text(group.leader);
+    const members = infoPanel.select('.members')
 
-    const genreList = Array.from(group.genres).map(g => {
-      if (g !== group.leader) {
-        return `<li>${g}</li>`;
-      }
+    members.selectAll('.genres, .tracks')
+      .on('click', function() {
+        let p = d3.event.target;
+        if (p.tagName === 'I') {
+          p = p.parentElement
+        }
+        p.classList.toggle('expand');
+        p.nextElementSibling
+          .classList.toggle('expand');
+      })
+      .call(selection => {
+        selection.nodes().forEach(n => n.classList.remove('expand'));
+      });
+
+    members.selectAll('.genre-list, .track-list')
+      .html('')
+      .call(selection => {
+        selection.nodes().forEach(n => n.classList.remove('expand'));
+      });
+
+    const genreList = members.select('.genre-list')
+    genreList.selectAll('li')
+      .data(Array.from(group.genres))
+      .enter().append('li')
+      .text(g => g)
+
+    const includedTracks = _.pickBy(graphData.tracks, t => {
+      return t.artists.some(function(a) {
+        return graphData.artists[a].genres.some(
+          g => group.genres.has(g));
+      });
     });
-    infoPanel.select('.members').html(`<ul>${genreList.join('')}</ul>`);
+    const trackList = members.select('.track-list')
+    trackList.selectAll('li')
+      .data(_.values(includedTracks))
+      .enter().append('li')
+      .text(t => {
+        const artists = t.artists.map(a => {
+          return graphData.artists[a].name;
+        });
+        return `${t.name} - ${artists.join(', ')}`
+      });
+
     infoPanel.attr('class', 'info-visible');
   });
-
-  function clamp(a, x, b) {
-    if (x < a) {
-      return a;
-    } else if (x > b) {
-      return b;
-    }
-    return x;
-  }
 
   function ticked() {
     link
