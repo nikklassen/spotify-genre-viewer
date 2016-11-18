@@ -3,22 +3,67 @@ import spotify from './spotify';
 import './exts';
 import _ from 'lodash';
 
-function renderPlaylists(data) {
-    const playlistUrl = data.href.slice(0, data.href.indexOf('?'));
-    d3.select('#playlists')
-      .html('')
-      .selectAll('li')
-      .data(data.items)
-      .enter().append('li')
-      .text(playlist => playlist.name)
-      .on('click', function(playlist) {
-        d3.event.stopPropagation();
-        spotify.queryPlaylist(playlistUrl, playlist.id)
-          .then(() => {
-            d3.select('#overlay')
-              .style('display', 'none');
-          });
+function showToast(msg) {
+  d3.select('#toast')
+    .attr('class', '')
+    .text(msg);
+  setTimeout(function() {
+    d3.select('#toast')
+      .attr('class', 'hide');
+  }, 2000);
+}
+
+function showModal(id) {
+  const content = document.importNode(
+    document.getElementById(id).content,
+    true);
+  const modal = document.querySelector('.modal');
+  modal.innerHTML = '';
+  modal.appendChild(content);
+  d3.select('#overlay')
+    .style('display', 'block');
+}
+
+function hideModal() {
+  d3.select('#overlay')
+    .style('display', 'none');
+}
+
+function showPlaylistModal(data) {
+  showModal('playlist-modal');
+  const playlistUrl = data.href.slice(0, data.href.indexOf('?'));
+  d3.select('#playlists')
+    .html('')
+    .selectAll('li')
+    .data(data.items)
+    .enter().append('li')
+    .text(playlist => playlist.name)
+    .on('click', function(playlist) {
+      d3.event.preventDefault();
+      spotify.queryPlaylist(playlistUrl, playlist.id)
+        .then(hideModal);
+    });
+}
+
+function showCreateModal() {
+  showModal('create-modal');
+  document.querySelector('.create-playlist [type="text"]')
+    .focus();
+  return new Promise(function(res, rej) {
+    d3.select('.create-playlist [value="Cancel"]')
+      .on('click', function() {
+        hideModal();
+        rej();
       });
+
+    d3.select('.create-playlist form')
+      .on('submit', function() {
+        d3.event.preventDefault();
+
+        hideModal();
+        res(this);
+      });
+  });
 }
 
 function populateGraph(data) {
@@ -127,16 +172,91 @@ var div = d3.select('body').append('div')
   .attr('class', 'tooltip')
   .style('opacity', 0);
 
-var colorMap = d3.scaleSequential(d3.interpolateRainbow);
+var colourMap = d3.scaleSequential(d3.interpolateRainbow);
+
+function showInfoForGroup(group, graphData) {
+  const infoPanel = d3.select('#info');
+  d3.select('.close').on('click', function(d) {
+    infoPanel.node().classList.remove('info-visible')
+  });
+
+  infoPanel.select('.name').text(group.leader);
+  const members = infoPanel.select('.members')
+
+  members.selectAll('.genres, .tracks')
+    .on('click', function() {
+      let p = d3.event.target;
+      if (p.tagName === 'I') {
+        p = p.parentElement
+      }
+      p.classList.toggle('expand');
+      p.nextElementSibling
+        .classList.toggle('expand');
+    })
+    .call(selection => {
+      selection.nodes().forEach(n => n.classList.remove('expand'));
+    });
+
+  members.selectAll('.genre-list, .track-list')
+    .html('')
+    .call(selection => {
+      selection.nodes().forEach(n => n.classList.remove('expand'));
+    });
+
+  const genreList = members.select('.genre-list')
+  genreList.selectAll('li')
+    .data(Array.from(group.genres))
+    .enter().append('li')
+    .text(g => g)
+
+  const includedTracks = _.pickBy(graphData.tracks, t => {
+    return t.artists.some(function(a) {
+      return graphData.artists[a].genres.some(
+        g => group.genres.has(g));
+    });
+  });
+  const trackList = members.select('.track-list')
+  trackList.selectAll('li')
+    .data(_.values(includedTracks))
+    .enter().append('li')
+    .text(t => {
+      const artists = t.artists.map(a => {
+        return graphData.artists[a].name;
+      });
+      return `${t.name} - ${artists.join(', ')}`
+    });
+
+  infoPanel.attr('class', 'info-visible');
+}
 
 function buildGraph(graphData) {
   const graph = populateGraph(graphData);
   const colours = getColours(graph);
 
+  function getGenreGroup(genre) {
+    return _.find(colours, group => {
+      return group.leader === genre || group.genres.has(genre);
+    });
+  }
   function getGenreColour(genre) {
     return _.findKey(colours, group => {
       return group.leader === genre || group.genres.has(genre);
     });
+  }
+  let playlistSelection = new Set();
+  function fillNodes(highlightGroup) {
+    node.selectAll('circle')
+      .attr('fill', d => {
+        let colour = getGenreColour(d.id);
+        let group = colours[colour];
+        if (isSelecting && playlistSelection.has(group)) {
+          return 'green';
+        }
+        if (!isSelecting || highlightGroup === colours[colour]) {
+          return colourMap(colour / numColours);
+        }
+        return 'grey';
+      });
   }
 
   const connected = {};
@@ -196,12 +316,25 @@ function buildGraph(graphData) {
   const numColours = _.size(colours);
   node.append('circle')
     .attr('r', 7)
-    .attr('fill', d => colorMap(getGenreColour(d.id) / numColours));
+    .attr('fill', d => {
+      let colour = getGenreColour(d.id);
+      if (isSelecting) {
+        if (selected.has(colour)) {
+          return 'green';
+        }
+        return 'grey';
+      }
+      return colourMap(colour / numColours)
+    });
 
   node.append('title')
-      .text(d => d.id);
+    .text(d => d.id);
 
   node.on('mouseover', function(d) {
+    if (isSelecting) {
+      fillNodes(getGenreGroup(d.id));
+      return;
+    }
     if (showLabels) return;
 
     div.transition()
@@ -212,6 +345,11 @@ function buildGraph(graphData) {
       .style('top', (d3.event.pageY - 28) + 'px');
   })
   node.on('mouseout', function(d) {
+    if (isSelecting) {
+      fillNodes()
+      return;
+    }
+
     div.transition()
       .duration(500)
       .style('opacity', 0);
@@ -240,61 +378,71 @@ function buildGraph(graphData) {
       return d.id;
     });
 
-  const infoPanel = d3.select('#info');
-  d3.select('.close').on('click', function(d) {
-    infoPanel.node().classList.remove('info-visible')
+  let isSelecting = false;
+  const buildPlaylistBtn = d3.select('#build-playlist-btn');
+  const makePlaylistBtn = d3.select('#create-playlist-btn');
+  const cancelBtn = d3.select('#cancel-btn');
+  buildPlaylistBtn.on('click', function(d) {
+    isSelecting = true;
+    fillNodes();
+    buildPlaylistBtn.attr('class', 'hide');
+    makePlaylistBtn.attr('class', '');
+    cancelBtn.attr('class', '');
   });
+
+  function cancelSelection() {
+    isSelecting = false;
+    playlistSelection.clear();
+    fillNodes();
+    buildPlaylistBtn.attr('class', '');
+    makePlaylistBtn.attr('class', 'hide');
+    cancelBtn.attr('class', 'hide');
+  }
+
+  makePlaylistBtn.on('click', function(d) {
+    let selectedGenres = new Set();
+    for (const group of playlistSelection) {
+      selectedGenres = selectedGenres.union(group.genres);
+    }
+    const tracks = _(graphData.tracks)
+      .values()
+      .filter(t => {
+        const genres = _(t.artists)
+          .map(a => graphData.artists[a].genres)
+          .flatten().value()
+        return selectedGenres.intersection(new Set(genres)).size > 0;
+      })
+      .map('uri').value();
+
+    cancelSelection();
+    showCreateModal()
+      .then(function(form) {
+        spotify.createPlaylist(
+          form.name.value,
+          form.isPublic.checked,
+          form.isCollaborative.checked)
+          .then(function(newPlaylist) {
+            return spotify.addTracksToPlaylist(newPlaylist.id, tracks);
+          })
+          .catch(function() {
+            showToast('An error occurred while creating the playlist');
+          })
+          .then(function() {
+            showToast('Playlist created');
+          });
+      });
+  });
+
+  cancelBtn.on('click', cancelSelection);
 
   node.on('click', function(d) {
     d3.event.stopPropagation();
-    let group = colours[getGenreColour(d.id)];
-    infoPanel.select('.name').text(group.leader);
-    const members = infoPanel.select('.members')
-
-    members.selectAll('.genres, .tracks')
-      .on('click', function() {
-        let p = d3.event.target;
-        if (p.tagName === 'I') {
-          p = p.parentElement
-        }
-        p.classList.toggle('expand');
-        p.nextElementSibling
-          .classList.toggle('expand');
-      })
-      .call(selection => {
-        selection.nodes().forEach(n => n.classList.remove('expand'));
-      });
-
-    members.selectAll('.genre-list, .track-list')
-      .html('')
-      .call(selection => {
-        selection.nodes().forEach(n => n.classList.remove('expand'));
-      });
-
-    const genreList = members.select('.genre-list')
-    genreList.selectAll('li')
-      .data(Array.from(group.genres))
-      .enter().append('li')
-      .text(g => g)
-
-    const includedTracks = _.pickBy(graphData.tracks, t => {
-      return t.artists.some(function(a) {
-        return graphData.artists[a].genres.some(
-          g => group.genres.has(g));
-      });
-    });
-    const trackList = members.select('.track-list')
-    trackList.selectAll('li')
-      .data(_.values(includedTracks))
-      .enter().append('li')
-      .text(t => {
-        const artists = t.artists.map(a => {
-          return graphData.artists[a].name;
-        });
-        return `${t.name} - ${artists.join(', ')}`
-      });
-
-    infoPanel.attr('class', 'info-visible');
+    if (isSelecting) {
+      playlistSelection.add(getGenreGroup(d.id));
+    } else {
+      showInfoForGroup(getGenreGroup(d.id), graphData);
+    }
+    fillNodes();
   });
 
   function ticked() {
@@ -330,6 +478,7 @@ function buildGraph(graphData) {
 }
 
 export default {
-  renderPlaylists,
   buildGraph,
+  showPlaylistModal,
+  showCreateModal,
 };

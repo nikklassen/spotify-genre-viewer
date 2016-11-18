@@ -1,13 +1,21 @@
 import * as d3 from 'd3';
 import ui from './ui';
 
+const scopes = [
+  'playlist-read-private',
+  'playlist-read-collaborative',
+  'user-library-read',
+  'playlist-modify-public',
+  'playlist-modify-private'];
+
 const authLocation = 'https://accounts.spotify.com/authorize' +
 `?client_id=${CLIENT_ID}` +
 `&response_type=token` +
 `&redirect_uri=${window.location}` +
-`&scope=playlist-read-private%20playlist-read-collaborative%20user-library-read`;
+`&scope=${scopes.join('%20')}`;
 
 let token = localStorage.getItem('auth-token');
+let userId = null;
 
 function authorize() {
   if (token === null) {
@@ -33,6 +41,9 @@ function authorize() {
       window.location = authLocation;
     }
   }
+  query('/v1/me').then(data => {
+    userId = data.id;
+  });
 }
 
 function query(url) {
@@ -48,9 +59,36 @@ function query(url) {
   });
 }
 
+function post(url, data) {
+  let apiUrl = url.startsWith('http') ? url : 'https://api.spotify.com' + url;
+  return new Promise(function(resolve, reject) {
+    d3.request(apiUrl)
+      .header('Authorization', 'Bearer ' + token.access_token)
+      .post(data)
+      .on('error', e => reject(e))
+      .on('load', function(xhr) {
+        resolve(JSON.parse(xhr.responseText));
+      });
+  });
+}
+
 function getPlaylists() {
   query('/v1/me/playlists?limit=50')
-  .then(ui.renderPlaylists);
+  .then(ui.showPlaylistModal);
+}
+
+function createPlaylist(name, isPublic, isCollaborative) {
+  return post(`/v1/users/${userId}/playlists`, JSON.stringify({
+    name,
+    'public': isPublic,
+    collaborative: isCollaborative,
+  }));
+}
+
+function addTracksToPlaylist(playlistId, uris) {
+  return post(`/v1/users/${userId}/playlists/${playlistId}/tracks`, JSON.stringify({
+    uris,
+  }));
 }
 
 function queryPlaylist(url, id) {
@@ -68,6 +106,7 @@ function queryPlaylist(url, id) {
         tracks[item.track.id] = {
           artists: artistIds,
           name: item.track.name,
+          uri: item.track.uri,
         };
       });
 
@@ -102,4 +141,6 @@ export default {
   authorize,
   getPlaylists,
   queryPlaylist,
+  createPlaylist,
+  addTracksToPlaylist,
 };

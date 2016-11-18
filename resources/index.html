@@ -4,7 +4,12 @@
   <meta name="viewport" content="width=device-width" />
 </head>
 <body>
-  <button id="toggle">Toggle Labels</button>
+  <div class="graph-actions">
+    <button id="toggle">Toggle Labels</button>
+    <button id="build-playlist-btn">Make playlist</button>
+    <button id="create-playlist-btn" class="hide">Create playlist</button>
+    <button id="cancel-btn" class="hide">Cancel</button>
+  </div>
   <svg width="960" height="700" viewBox="0 0 960 700"></svg>
   <div id="info">
     <div class="header">
@@ -20,14 +25,48 @@
   </div>
 
   <div id="overlay">
-    <div class="modal">
-      <h3>Select a playlist to inspect:</h3>
-      <ul id="playlists">
-        <div class="spinner">
-          <i class="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i>
+    <div class="modal"></div>
+  </div>
+
+  <template id="playlist-modal">
+    <h3>Select a playlist to inspect:</h3>
+    <ul id="playlists">
+      <div class="spinner">
+        <i class="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i>
+      </div>
+    </ul>
+  </template>
+
+  <template id="create-modal">
+    <div class="create-playlist">
+      <h3>Create a playlist</h3>
+      <form>
+        <div>
+          Name
+          <input type="text" name="name" />
         </div>
-      </ul>
+        <div>
+          <label>
+            <input type="checkbox" name="isPublic" checked />
+            public?
+          </label>
+        </div>
+        <div>
+          <label>
+            <input type="checkbox" name="isCollaborative" />
+            collaborative?
+          </label>
+        </div>
+        <div class="actions">
+          <input type="submit" value="Create" />
+          <input type="button" value="Cancel" />
+        </div>
+      </form>
     </div>
+  </template>
+
+  <div id="toast" class="hide">
+    <div></div>
   </div>
 
   <script src="app.dist.js"></script>
