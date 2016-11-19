@@ -56,6 +56,10 @@ function query(url) {
       .on('load', function(xhr) {
         resolve(JSON.parse(xhr.responseText));
       });
+  }).catch(e => {
+    if (e.target.status === 401) {
+      authenticate();
+    }
   });
 }
 
@@ -69,6 +73,10 @@ function post(url, data) {
       .on('load', function(xhr) {
         resolve(JSON.parse(xhr.responseText));
       });
+  }).catch(e => {
+    if (e.target.status === 401) {
+      authenticate();
+    }
   });
 }
 
