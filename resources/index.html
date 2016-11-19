@@ -6,20 +6,22 @@
 <body>
   <div class="graph-actions">
     <button id="toggle">Toggle Labels</button>
-    <button id="build-playlist-btn">Make playlist</button>
     <button id="choose-playlist-btn">Choose playlist</button>
-    <button id="create-playlist-btn" class="hide">Create playlist</button>
+    <button id="build-playlist-btn">Make playlist</button>
+    <button id="create-playlist-btn" class="hide">Create</button>
     <button id="cancel-btn" class="hide">Cancel</button>
   </div>
 
-  <div id="loading">
+  <div id="loading" class="hide">
     <div>
       Loading...
       <i class="fa fa-circle-o-notch fa-spin"></i>
     </div>
   </div>
 
-  <svg width="960" height="700" viewBox="0 0 960 700"></svg>
+  <div id="graph-wrapper">
+    <svg width="960" height="700" viewBox="0 0 960 700"></svg>
+  </div>
 
   <div id="info">
     <div class="header">

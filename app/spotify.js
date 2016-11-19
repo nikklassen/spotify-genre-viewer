@@ -11,7 +11,7 @@ const scopes = [
 const authLocation = 'https://accounts.spotify.com/authorize' +
 `?client_id=${CLIENT_ID}` +
 `&response_type=token` +
-`&redirect_uri=${window.location}` +
+`&redirect_uri=${window.location.toString().replace(/\?.*/, '')}` +
 `&scope=${scopes.join('%20')}`;
 
 let token = localStorage.getItem('auth-token');
@@ -106,6 +106,7 @@ function queryPlaylist(url, id) {
           artists: artistIds,
           name: item.track.name,
           uri: item.track.uri,
+          externalLink: item.track.external_urls.spotify,
         };
       });
 

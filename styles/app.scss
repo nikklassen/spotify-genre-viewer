@@ -47,7 +47,7 @@ body {
 .graph-actions {
   position: absolute;
   top: 20px;
-  left: 960px;
+  right: 20px;
 
   button {
     display: block;
@@ -58,6 +58,10 @@ body {
       display: none;
     }
   }
+}
+
+#create-playlist-btn, #build-playlist-btn {
+  margin-top: 2em;
 }
 
 .hide {
@@ -221,14 +225,17 @@ li {
     background: white;
     color: black;
 
+    $header-height: 35px;
+
     h3 {
-      height: 30px;
+      height: $header-height;
       margin: 0;
+      padding-top: 5px;
       text-align: center;
     }
 
     ul {
-      height: calc(100% - 30px);
+      height: calc(100% - #{$header-height});
       border-top: 1px solid black;
     }
 
@@ -277,13 +284,28 @@ li {
   bottom: 3em;
   left: 3em;
   padding: 1em;
-
-  background: lightgreen;
-  color: darkgreen;
   width: 200px;
 
   border-radius: 5px;
+
+  background: lightgreen;
+  color: darkgreen;
   border: 2px solid darkgreen;
+
+  opacity: 1;
+  display: block;
+
+  &.error {
+    background: lightpink;
+    color: red;
+    border: 2px solid red;
+  }
+
+  &.hide {
+    opacity: 0;
+  }
+
+  transition: opacity 0.2s ease-in-out;
 }
 
 .btn, [type="button"], [type="submit"], button {
@@ -308,4 +330,8 @@ li {
     position:relative;
     top:1px;
   }
+}
+
+#graph-wrapper {
+  text-align: center;
 }

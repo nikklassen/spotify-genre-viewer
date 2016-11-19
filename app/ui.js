@@ -3,10 +3,11 @@ import spotify from './spotify';
 import './exts';
 import _ from 'lodash';
 
-function showToast(msg) {
+function showToast(msg, error = false) {
   d3.select('#toast')
-    .attr('class', '')
+    .attr('class', error ? 'error' : '')
     .text(msg);
+
   setTimeout(function() {
     d3.select('#toast')
       .attr('class', 'hide');
@@ -54,6 +55,7 @@ function setPlaylists(data) {
       d3.event.preventDefault();
       hideModal();
       showLoading();
+      svg.html('');
       spotify.queryPlaylist(playlist.tracks.href, playlist.id);
     });
 }
@@ -127,6 +129,13 @@ function populateGraph(data) {
   return jsonData;
 }
 
+function compare(a, b) {
+  if (a < b) {
+    return -1
+  }
+  return a > b ? 1 : 0;
+}
+
 function getColours(graph) {
   const groups = {};
   const connections = {};
@@ -146,31 +155,36 @@ function getColours(graph) {
     });
   })
 
+  // Break ties using a simple heuristic that shorter genre names are usually more general,
+  // i.e. pop is a better leader than viral-pop
   let toColour = allGenres.slice(0);
   toColour.sort(function(a, b) {
-    if (connections[a] > connections[b]) {
-      return -1;
-    } else if (connections[a] < connections[b]) {
-      return 1;
+    let order = compare(connections[a], connections[b]);
+    if (order === 0) {
+      // Flip order of a & b since longer length is worse
+      order = compare(b.length, a.length);
     }
-    return 0;
+    // Reverse sort order
+    return order * -1;
   })
 
   let colours = {};
   let colour = 1;
   while (toColour.length > 0) {
     const leader = toColour.shift();
-    colours[colour] = {
+    const group = {
       leader,
       genres: new Set([leader]),
     };
     for (const genre of toColour) {
       const intersection = groups[leader].intersection(groups[genre]);
-      if ((intersection.size > 3 || intersection.equals(groups[leader])) && graph.genres[leader][genre]) {
-        colours[colour].genres.add(genre);
+      if ((intersection.size > 2 || intersection.equals(groups[leader])) && graph.genres[leader][genre]) {
+        group.genres.add(genre);
       }
     }
-    toColour = toColour.filter(c => !colours[colour].genres.has(c))
+    toColour = toColour.filter(c => !group.genres.has(c))
+
+    colours[colour] = group;
     colour += 1;
   }
 
@@ -192,6 +206,9 @@ function init() {
     .attr('class', 'hide');
   d3.select('#create-playlist-btn')
     .attr('class', 'hide');
+
+  d3.select('#overlay')
+    .on('click', hideModal);
 
   function displayPlaylists() {
     showPlaylistModal();
@@ -237,7 +254,11 @@ function showInfoForGroup(group, graphData) {
   genreList.selectAll('li')
     .data(Array.from(group.genres))
     .enter().append('li')
-    .text(g => g)
+    .append('a')
+    .attr('href', g => 'https://play.spotify.com/search/genre%3A' + encodeURIComponent(g.replace(/ /g, '')))
+    .attr('target', '_blank')
+    .attr('rel', 'noreferrer')
+    .text(_.identity)
 
   const includedTracks = _.pickBy(graphData.tracks, t => {
     return t.artists.some(function(a) {
@@ -249,6 +270,10 @@ function showInfoForGroup(group, graphData) {
   trackList.selectAll('li')
     .data(_.values(includedTracks))
     .enter().append('li')
+    .append('a')
+    .attr('href', t => t.externalLink)
+    .attr('target', '_blank')
+    .attr('rel', 'noreferrer')
     .text(t => {
       const artists = t.artists.map(a => {
         return graphData.artists[a].name;
@@ -424,6 +449,7 @@ function buildGraph(graphData) {
     buildPlaylistBtn.attr('class', 'hide');
     makePlaylistBtn.attr('class', '');
     cancelBtn.attr('class', '');
+    showToast('Select genres to include in the playlist');
   });
 
   function cancelSelection() {
@@ -460,11 +486,11 @@ function buildGraph(graphData) {
           .then(function(newPlaylist) {
             return spotify.addTracksToPlaylist(newPlaylist.id, tracks);
           })
-          .catch(function() {
-            showToast('An error occurred while creating the playlist');
-          })
           .then(function() {
             showToast('Playlist created');
+          })
+          .catch(function() {
+            showToast('An error occurred while creating the playlist', true);
           });
       });
   });
