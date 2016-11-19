@@ -7,10 +7,20 @@
   <div class="graph-actions">
     <button id="toggle">Toggle Labels</button>
     <button id="build-playlist-btn">Make playlist</button>
+    <button id="choose-playlist-btn">Choose playlist</button>
     <button id="create-playlist-btn" class="hide">Create playlist</button>
     <button id="cancel-btn" class="hide">Cancel</button>
   </div>
+
+  <div id="loading">
+    <div>
+      Loading...
+      <i class="fa fa-circle-o-notch fa-spin"></i>
+    </div>
+  </div>
+
   <svg width="960" height="700" viewBox="0 0 960 700"></svg>
+
   <div id="info">
     <div class="header">
       <div class="name"></div>
@@ -24,12 +34,12 @@
     </div>
   </div>
 
-  <div id="overlay">
+  <div id="overlay" class="hide">
     <div class="modal"></div>
   </div>
 
   <template id="playlist-modal">
-    <h3>Select a playlist to inspect:</h3>
+    <h3>Select a playlist to visualize</h3>
     <ul id="playlists">
       <div class="spinner">
         <i class="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i>

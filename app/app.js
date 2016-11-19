@@ -6,4 +6,4 @@ import '../styles/app.scss';
 import spotify from './spotify';
 
 spotify.authorize();
-spotify.getPlaylists();
+ui.init();

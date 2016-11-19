@@ -8,6 +8,8 @@ $thin-border: 1px solid black;
 }
 
 body {
+  height: 100%;
+  overflow: hidden;
   font-family: 'PT Sans', Helvetica, Arial, sans-serif;
 }
 
@@ -70,6 +72,13 @@ body {
   background: lightsteelblue;
   border: 0px;
   border-radius: 8px;
+}
+
+#loading {
+    margin: 300px auto 0 auto;
+    width: 300px;
+    font-size: 3em;
+    text-align: center;
 }
 
 @keyframes open {
@@ -179,6 +188,7 @@ body {
     }
     li {
       margin-left: 15px;
+      padding: 0 10px;
     }
   }
 }
@@ -224,6 +234,11 @@ li {
 
     li {
       cursor: pointer;
+      padding: 5px 10px;
+
+      &:hover {
+        background: rgba(176, 196, 222, 0.5);
+      }
     }
 
     .spinner {

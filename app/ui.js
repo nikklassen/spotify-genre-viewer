@@ -29,9 +29,21 @@ function hideModal() {
     .style('display', 'none');
 }
 
-function showPlaylistModal(data) {
+function showLoading() {
+  d3.select('#loading')
+    .attr('class', '');
+}
+
+function hideLoading() {
+  d3.select('#loading')
+    .attr('class', 'hide');
+}
+
+function showPlaylistModal() {
   showModal('playlist-modal');
-  const playlistUrl = data.href.slice(0, data.href.indexOf('?'));
+}
+
+function setPlaylists(data) {
   d3.select('#playlists')
     .html('')
     .selectAll('li')
@@ -40,8 +52,9 @@ function showPlaylistModal(data) {
     .text(playlist => playlist.name)
     .on('click', function(playlist) {
       d3.event.preventDefault();
-      spotify.queryPlaylist(playlistUrl, playlist.id)
-        .then(hideModal);
+      hideModal();
+      showLoading();
+      spotify.queryPlaylist(playlist.tracks.href, playlist.id);
     });
 }
 
@@ -174,6 +187,23 @@ var div = d3.select('body').append('div')
 
 var colourMap = d3.scaleSequential(d3.interpolateRainbow);
 
+function init() {
+  d3.select('#cancel-btn')
+    .attr('class', 'hide');
+  d3.select('#create-playlist-btn')
+    .attr('class', 'hide');
+
+  function displayPlaylists() {
+    showPlaylistModal();
+    spotify.getPlaylists()
+      .then(setPlaylists);
+  }
+  d3.select('#choose-playlist-btn')
+    .on('click', displayPlaylists);
+
+  displayPlaylists();
+}
+
 function showInfoForGroup(group, graphData) {
   const infoPanel = d3.select('#info');
   d3.select('.close').on('click', function(d) {
@@ -230,6 +260,9 @@ function showInfoForGroup(group, graphData) {
 }
 
 function buildGraph(graphData) {
+  // Clear existing graphs
+  svg.html('');
+
   const graph = populateGraph(graphData);
   const colours = getColours(graph);
 
@@ -280,6 +313,9 @@ function buildGraph(graphData) {
       .distanceMax(100)
       .strength(-30))
     .force('center', d3.forceCenter(width / 2, height / 2));
+
+  // Graph is starting to be populated now
+  hideLoading();
 
   const link = svg.append('g')
     .attr('class', 'links')
@@ -481,4 +517,6 @@ export default {
   buildGraph,
   showPlaylistModal,
   showCreateModal,
+  init,
+  setPlaylists,
 };

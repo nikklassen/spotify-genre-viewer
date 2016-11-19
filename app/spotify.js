@@ -73,8 +73,7 @@ function post(url, data) {
 }
 
 function getPlaylists() {
-  query('/v1/me/playlists?limit=50')
-  .then(ui.showPlaylistModal);
+  return query('/v1/me/playlists?limit=50')
 }
 
 function createPlaylist(name, isPublic, isCollaborative) {
@@ -93,7 +92,7 @@ function addTracksToPlaylist(playlistId, uris) {
 
 function queryPlaylist(url, id) {
   const tracks = {};
-  return query(`${url}/${id}/tracks?limit=100`)
+  return query(`${url}?limit=100`)
     .then(function(data) {
       let artists = new Set();
       data.items.forEach(function(item) {
