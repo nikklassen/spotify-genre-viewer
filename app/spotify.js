@@ -46,6 +46,14 @@ function authorize() {
   });
 }
 
+function authenticationFilter(e) {
+  if (e.target.status === 401) {
+    authenticate();
+  } else {
+    throw e;
+  }
+}
+
 function query(url) {
   let apiUrl = url.startsWith('http') ? url : 'https://api.spotify.com' + url;
   return new Promise(function(resolve, reject) {
@@ -56,11 +64,7 @@ function query(url) {
       .on('load', function(xhr) {
         resolve(JSON.parse(xhr.responseText));
       });
-  }).catch(e => {
-    if (e.target.status === 401) {
-      authenticate();
-    }
-  });
+  }).catch(authenticationFilter);
 }
 
 function post(url, data) {
@@ -73,11 +77,7 @@ function post(url, data) {
       .on('load', function(xhr) {
         resolve(JSON.parse(xhr.responseText));
       });
-  }).catch(e => {
-    if (e.target.status === 401) {
-      authenticate();
-    }
-  });
+  }).catch(authenticationFilter);
 }
 
 function getPlaylists() {
