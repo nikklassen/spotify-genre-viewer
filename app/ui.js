@@ -9,8 +9,8 @@ function showToast(msg, error = false) {
     .text(msg);
 
   setTimeout(function() {
-    d3.select('#toast')
-      .attr('class', 'hide');
+    document.getElementById('toast')
+      .classList.add('hide');
   }, 2000);
 }
 
@@ -45,10 +45,11 @@ function showPlaylistModal() {
 }
 
 function setPlaylists(data) {
+  const items = [spotify.LIBRARY_ITEM].concat(data.items);
   d3.select('#playlists')
     .html('')
     .selectAll('li')
-    .data(data.items)
+    .data(items)
     .enter().append('li')
     .text(playlist => playlist.name)
     .on('click', function(playlist) {
@@ -56,8 +57,18 @@ function setPlaylists(data) {
       hideModal();
       showLoading();
       svg.html('');
-      spotify.queryPlaylist(playlist.tracks.href, playlist.id);
+      spotify.queryPlaylist(playlist.tracks.href)
+        .catch(() => {
+          hideLoading();
+          showToast('An error occurred, please try again', true);
+          displayPlaylists()
+        });
     });
+  d3.select('#playlists li:first-child')
+    .on('mouseover', () => {
+      showTooltip('If your library is large this will take a while. Viewing smaller playlists is recommended');
+    })
+    .on('mouseout', hideTooltip);
 }
 
 function showCreateModal() {
@@ -79,6 +90,25 @@ function showCreateModal() {
         res(this);
       });
   });
+}
+
+const tooltip = d3.select('body').append('div')
+  .attr('class', 'tooltip')
+  .style('opacity', 0);
+
+function showTooltip(html) {
+    tooltip.transition()
+      .duration(200)
+      .style('opacity', .9);
+    tooltip.html(html)
+      .style('left', (d3.event.pageX) + 'px')
+      .style('top', (d3.event.pageY - 28) + 'px');
+}
+
+function hideTooltip() {
+    tooltip.transition()
+      .duration(500)
+      .style('opacity', 0);
 }
 
 function populateGraph(data) {
@@ -195,11 +225,16 @@ var svg = d3.select('svg'),
   width = +svg.attr('width'),
   height = +svg.attr('height');
 
-var div = d3.select('body').append('div')
-  .attr('class', 'tooltip')
-  .style('opacity', 0);
-
 var colourMap = d3.scaleSequential(d3.interpolateRainbow);
+
+function displayPlaylists() {
+  showPlaylistModal();
+  spotify.getPlaylists()
+    .then(setPlaylists)
+    .catch(() => {
+      showToast('An error occurred, please try again', true);
+    });
+}
 
 function init() {
   d3.select('#cancel-btn')
@@ -210,11 +245,6 @@ function init() {
   d3.select('#overlay')
     .on('click', hideModal);
 
-  function displayPlaylists() {
-    showPlaylistModal();
-    spotify.getPlaylists()
-      .then(setPlaylists);
-  }
   d3.select('#choose-playlist-btn')
     .on('click', displayPlaylists);
 
@@ -398,22 +428,16 @@ function buildGraph(graphData) {
     }
     if (showLabels) return;
 
-    div.transition()
-      .duration(200)
-      .style('opacity', .9);
-    div.html(d.id)
-      .style('left', (d3.event.pageX) + 'px')
-      .style('top', (d3.event.pageY - 28) + 'px');
-  })
+    showTooltip(d.id);
+  });
+
   node.on('mouseout', function(d) {
     if (isSelecting) {
       fillNodes()
       return;
     }
 
-    div.transition()
-      .duration(500)
-      .style('opacity', 0);
+    hideTooltip();
   });
 
   simulation

@@ -17,6 +17,14 @@ const authLocation = 'https://accounts.spotify.com/authorize' +
 let token = localStorage.getItem('auth-token');
 let userId = null;
 
+const LIBRARY_URL = 'https://api.spotify.com/v1/me/tracks';
+const LIBRARY_ITEM = Object.freeze({
+  name: 'My Library *',
+  tracks: {
+    href: LIBRARY_URL,
+  },
+});
+
 function authorize() {
   if (token === null) {
     const hash = window.location.hash;
@@ -81,7 +89,7 @@ function post(url, data) {
 }
 
 function getPlaylists() {
-  return query('/v1/me/playlists?limit=50')
+  return query('/v1/me/playlists?limit=50');
 }
 
 function createPlaylist(name, isPublic, isCollaborative) {
@@ -98,9 +106,27 @@ function addTracksToPlaylist(playlistId, uris) {
   }));
 }
 
-function queryPlaylist(url, id) {
+function queryAll(url) {
+  return query(url)
+    .then(data => {
+      if (data.next !== null) {
+        return queryAll(data.next)
+          .then(all => {
+            all.items = all.items.concat(data.items);
+            return all;
+          });
+      }
+      return data;
+    });
+}
+
+function queryPlaylist(url) {
   const tracks = {};
-  return query(`${url}?limit=100`)
+  let limit = 100;
+  if (url === LIBRARY_URL) {
+    limit = 50;
+  }
+  return queryAll(`${url}?limit=${limit}`)
     .then(function(data) {
       let artists = new Set();
       data.items.forEach(function(item) {
@@ -151,4 +177,5 @@ export default {
   queryPlaylist,
   createPlaylist,
   addTracksToPlaylist,
+  LIBRARY_ITEM,
 };

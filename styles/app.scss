@@ -71,11 +71,12 @@ body {
 .group-title, div.tooltip {
   position: absolute;
   text-align: center;
-  padding: 2px;
+  padding: 2px 4px;
   font: 12px sans-serif;
   background: lightsteelblue;
   border: 0px;
   border-radius: 8px;
+  z-index: 12;
 }
 
 #loading {
@@ -285,6 +286,7 @@ li {
   left: 3em;
   padding: 1em;
   width: 200px;
+  z-index: 11;
 
   border-radius: 5px;
 
