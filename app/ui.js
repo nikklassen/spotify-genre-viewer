@@ -3,6 +3,8 @@ import spotify from './spotify';
 import './exts';
 import _ from 'lodash';
 
+let isSelecting = false;
+
 function showToast(msg, error = false) {
   d3.select('#toast')
     .attr('class', error ? 'error' : '')
@@ -58,7 +60,8 @@ function setPlaylists(data) {
       showLoading();
       svg.html('');
       spotify.queryPlaylist(playlist.tracks.href)
-        .catch(() => {
+        .catch(e => {
+          console.error(e);
           hideLoading();
           showToast('An error occurred, please try again', true);
           displayPlaylists()
@@ -171,7 +174,6 @@ function getColours(graph) {
   const connections = {};
   const allGenres = graph.nodes.map(n => n.id);
   allGenres.forEach(function(genre) {
-    const counts = {};
     groups[genre] = new Set([genre]);
     let links = graph.genres[genre];
     if (!links) {
@@ -285,7 +287,7 @@ function showInfoForGroup(group, graphData) {
     .data(Array.from(group.genres))
     .enter().append('li')
     .append('a')
-    .attr('href', g => 'https://play.spotify.com/search/genre%3A' + encodeURIComponent(g.replace(/ /g, '')))
+    .attr('href', g => 'https://open.spotify.com/search/results/genre%3A' + encodeURIComponent(g.replace(/ /g, '')))
     .attr('target', '_blank')
     .attr('rel', 'noreferrer')
     .text(_.identity)
@@ -463,7 +465,6 @@ function buildGraph(graphData) {
       return d.id;
     });
 
-  let isSelecting = false;
   const buildPlaylistBtn = d3.select('#build-playlist-btn');
   const makePlaylistBtn = d3.select('#create-playlist-btn');
   const cancelBtn = d3.select('#cancel-btn');
@@ -521,7 +522,7 @@ function buildGraph(graphData) {
 
   cancelBtn.on('click', cancelSelection);
 
-  node.on('click', function(d) {
+  function nodeClick(d) {
     d3.event.stopPropagation();
     if (isSelecting) {
       playlistSelection.add(getGenreGroup(d.id));
@@ -529,7 +530,9 @@ function buildGraph(graphData) {
       showInfoForGroup(getGenreGroup(d.id), graphData);
     }
     fillNodes();
-  });
+  }
+  node.on('click', nodeClick);
+  titleNodes.on('click', nodeClick);
 
   function ticked() {
     link

@@ -8,10 +8,13 @@ const scopes = [
   'playlist-modify-public',
   'playlist-modify-private'];
 
+const callbackURI = window.location.toString()
+  .replace(/\?.*/, '')
+  .replace(/#.*/, '')
 const authLocation = 'https://accounts.spotify.com/authorize' +
 `?client_id=${CLIENT_ID}` +
 `&response_type=token` +
-`&redirect_uri=${window.location.toString().replace(/\?.*/, '')}` +
+`&redirect_uri=${callbackURI}` +
 `&scope=${scopes.join('%20')}`;
 
 let token = localStorage.getItem('auth-token');
@@ -28,6 +31,7 @@ const LIBRARY_ITEM = Object.freeze({
 function authorize() {
   if (token === null) {
     const hash = window.location.hash;
+    window.location.hash = '';
     if (hash.includes('access_token')) {
       token = {};
       // Remove leading #
@@ -54,9 +58,10 @@ function authorize() {
   });
 }
 
-function authenticationFilter(e) {
+function authorizationFilter(e) {
   if (e.target.status === 401) {
-    authenticate();
+    token = null;
+    authorize();
   } else {
     throw e;
   }
@@ -72,7 +77,7 @@ function query(url) {
       .on('load', function(xhr) {
         resolve(JSON.parse(xhr.responseText));
       });
-  }).catch(authenticationFilter);
+  }).catch(authorizationFilter);
 }
 
 function post(url, data) {
@@ -85,7 +90,7 @@ function post(url, data) {
       .on('load', function(xhr) {
         resolve(JSON.parse(xhr.responseText));
       });
-  }).catch(authenticationFilter);
+  }).catch(authorizationFilter);
 }
 
 function getPlaylists() {

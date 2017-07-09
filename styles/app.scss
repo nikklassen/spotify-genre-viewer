@@ -1,4 +1,4 @@
-$fa-font-path: "./font-awesome/fonts";
+$fa-font-path: "fonts";
 @import "font-awesome/scss/font-awesome";
 
 $thin-border: 1px solid black;
@@ -29,7 +29,7 @@ body {
 }
 
 .title text {
-  cursor: default;
+  cursor: pointer;
 
   -webkit-user-select: none;
   -moz-user-select: none;
