@@ -1,44 +1,53 @@
 const webpack = require('webpack');
-const production = process.env.NODE_ENV === 'production';
+const path = require('path');
+const ExtractTextPlugin = require('extract-text-webpack-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
-  debug:   !production,
-  devtool: 'source-map',
-  entry: {
-    app: ['./app/app.js'],
-  },
-  output : {
-    path: './static',
+  entry: './app/app.js',
+  output: {
+    path: path.resolve(__dirname, 'static'),
     filename: 'app.dist.js'
   },
-  module : {
-    loaders: [
-      {
-        exclude: /node_modules/,
-        loader : 'babel-loader',
-        test   : /\.js$/,
-        query: {
-          presets: ['es2015']
-        }
-      },
-      {
-        test: /\.scss$/,
-        loaders: ['style', 'css', 'sass'],
-      },
-      {
-        test: /\.(eot|svg|ttf|woff|woff2)(\?v=\d+\.\d+\.\d+)?$/,
-        loader: 'file'
-      }
+  module: {
+    rules: [
+    {
+      exclude: [
+        path.resolve(__dirname, 'node_modules'),
+      ],
+      loader: 'babel-loader',
+      test: /\.js$/,
+    },
+    {
+      test: /\.scss$/,
+      use: ExtractTextPlugin.extract({
+        fallback: 'style-loader',
+        use: ['css-loader', 'sass-loader'],
+      }),
+    },
+    {
+      test: /\.(eot|svg|ttf|woff|woff2)(\?v=\d+\.\d+\.\d+)?$/,
+      loader: 'file-loader',
+    }
     ],
   },
   plugins: [
-    new webpack.HotModuleReplacementPlugin(),
     new webpack.DefinePlugin({
       CLIENT_ID: `'${process.env.CLIENT_ID}'`,
-    })
+    }),
+    new HtmlWebpackPlugin({
+      inject: true,
+      template: path.resolve(__dirname, 'resources/index.html'),
+    }),
+    new ExtractTextPlugin('app.css'),
   ],
   devServer: {
-    inline: true,
-    hot: true,
-  }
+    contentBase: path.resolve(__dirname, 'static'),
+  },
+  watch: true,
+  watchOptions: {
+    poll: true,
+    poll: 1000,
+  },
+  devtool: 'source-map',
 };
