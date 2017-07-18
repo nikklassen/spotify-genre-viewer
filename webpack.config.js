@@ -7,7 +7,7 @@ module.exports = {
   entry: './app/app.js',
   output: {
     path: path.resolve(__dirname, 'static'),
-    filename: 'app.dist.js'
+    filename: './app.dist.js'
   },
   module: {
     rules: [
@@ -15,8 +15,13 @@ module.exports = {
       exclude: [
         path.resolve(__dirname, 'node_modules'),
       ],
-      loader: 'babel-loader',
       test: /\.js$/,
+      use: {
+        loader: 'babel-loader',
+        options: {
+          presets: ['env'],
+        },
+      },
     },
     {
       test: /\.scss$/,
@@ -39,7 +44,7 @@ module.exports = {
       inject: true,
       template: path.resolve(__dirname, 'resources/index.html'),
     }),
-    new ExtractTextPlugin('app.css'),
+    new ExtractTextPlugin('./app.css'),
   ],
   devServer: {
     contentBase: path.resolve(__dirname, 'static'),
